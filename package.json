@@ -1,0 +1,33 @@
+{
+  "name": "node-js-template",
+  "version": "1.0.0",
+  "description": "joma's template",
+  "main": "index.js",
+  "dependencies": {
+    "ejs": "^2.5.9",
+    "express": "^4.16.3",
+    "multer": "^1.4.0",
+    "opn": "^5.4.0",
+    "request": "^2.88.0",
+    "request-debug": "^0.2.0",
+    "tape": "^4.9.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jomaoppa/node-js-template.git"
+  },
+  "keywords": [
+    "node"
+  ],
+  "author": "Joma",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jomaoppa/node-js-template/issues"
+  },
+  "homepage": "https://github.com/jomaoppa/node-js-template#readme"
+}
