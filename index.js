@@ -99,6 +99,24 @@ function getUserInfo(req,res){
 	}
 	else getAcceptance(res);}
 
+function extendTokenLifetime(){
+	requestOptions = {
+		'uri': state.applicationConfig.graphEndpoint + "/policies",
+		'headers' : {
+			'Authorization': "Bearer " + state.auth.token,
+			'Content-Type': 'application/json'
+		},
+		json: true,
+		'body':	{
+			"displayName":"CustomTokenLifetimePolicy",
+			"definition":["{\"TokenLifetimePolicy\":{\"Version\":1,\"MaxAgeSingleFactor	\":true}}"],
+			"type":"TokenLifetimePolicy"
+		  }
+	};
+	request(requestOptions, (err,httpResponse,body) => {
+		if (err){return console.error('Policy error when trying to extend lifetime is :', err)}
+	})
+}
 
 function getToken(req,res){
 	// check to see if token already exists and clientcode
@@ -117,7 +135,9 @@ function getToken(req,res){
 			if ((httpResponse == 400)&&(response.error=='invalid_grant'))
 				console.log("what ?! : ", this.state.auth.clientcode);
 				this.state.auth.clientcode = null;
-			state.auth.token=response.access_token;
+			newtoken=response.access_token;
+			state.auth.token=newtoken;
+			if(newtoken) extendTokenLifetime();
 			res.redirect('/');
 		})
 		.on('error', function(err) {
