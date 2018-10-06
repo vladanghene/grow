@@ -91,10 +91,10 @@ function getToken(clientcode, res){
 				{
 					// handle error from server when granting token
 				}
-				newtoken=response.access_token;
-				state.auth.token=newtoken;
-				if(newtoken) extendTokenLifetime();
-				res.redirect('/');
+			newtoken=response.access_token;
+			state.auth.token=newtoken;
+			if(newtoken) extendTokenLifetime();
+			res.redirect('/');
 		})
 		.on('error', function(err) {
 			console.log(err)
