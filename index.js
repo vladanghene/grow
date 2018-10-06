@@ -88,10 +88,13 @@ function getToken(clientcode, res){
 			}
 			let response = JSON.parse(body);
 			if ((httpResponse == 400)&&(response.error=='invalid_grant'))
+				{
+					// handle error from server when granting token
+				}
 				newtoken=response.access_token;
 				state.auth.token=newtoken;
 				if(newtoken) extendTokenLifetime();
-			res.redirect('/');
+				res.redirect('/');
 		})
 		.on('error', function(err) {
 			console.log(err)
