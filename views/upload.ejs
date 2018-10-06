@@ -40,10 +40,15 @@
 			</form>
 
 			<% if (typeof resp == 'object' && resp) { %>
-				<h2>Upload to drive complete ! Go to Download to get your pdf.</h2>
-				<div><%= JSON.stringify(resp) %></div>
+				<% if (resp.error) {%>
+					<h2>Error</h2>
+					<div><%= JSON.stringify(resp) %></div>
+				<% } %>
+				<% if (!resp.error) {%>
+					<h2>Upload to drive complete ! Go to Download to get your pdf.</h2>
+					<div><%= JSON.stringify(resp) %></div>
+				<% } %>
 		   <% } %>
-
 		</div>
 	</div>
 

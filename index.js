@@ -46,7 +46,10 @@ app.get('/token', (req,res) => {
 app.get('/download', (req,res) => {res.sendFile(path.join(__dirname, 'public', "document.pdf"))})
 app.get('/upload', (req,res) => res.render('upload'));
 app.post('/upload', upload, (req,res) => uploadToDrive(req,res));
-app.get('/logout', (req, res)=>{state.auth.token=null;res.redirect('/')})
+app.get('/logout', (req, res)=>{
+	state.auth.token=null;
+	res.render('response', {resp: {token:false}})
+});
 
 function getAcceptance(res){
 	res.redirect('https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
@@ -89,7 +92,8 @@ function getToken(clientcode, res){
 			let response = JSON.parse(body);
 			if ((httpResponse == 400)&&(response.error=='invalid_grant'))
 				{
-					// handle error from server when granting token
+					// console.log("invalid grant")
+					// return;
 				}
 			newtoken=response.access_token;
 			state.auth.token=newtoken;
@@ -133,6 +137,7 @@ function getUserInfo(req,res){
 		else {
 			getAcceptance(res);
 		}
+		res.render('response');
 	}}
 
 function extendTokenLifetime(){
