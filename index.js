@@ -17,9 +17,10 @@ var router = express.Router()
 state={
 	applicationConfig : {
 			clientID: process.env.APPID,
-			apppwd:process.env.APPPWD,
+			apppwd: process.env.APPPWD,
 			graphEndpoint: "https://graph.microsoft.com/beta",
-			redirectUrl:process.env.INSTANCE
+			redirectUrl:"http://localhost:5000/token",
+			scope:"user.read Files.ReadWrite.All offline_access"
 	},
 	auth: {
 		token: null,
@@ -38,13 +39,9 @@ app.listen(PORT, () => console.log(`Listening on ${ PORT }`));
 
 app.get('/', (req, res) => {res.redirect('getuser')});
 app.get('/getuser', (req,res) => getUserInfo(req,res));
-app.get('/gettoken', (req,res) => {
-	getToken(req,res)
-	});
 app.get('/token', (req,res) => {
-	console.log("got clientcode: ", req.query.code);
 	state.auth.clientcode = req.query.code;
-	res.redirect('/gettoken?code='+ req.query.code);
+	getToken(state.auth.clientcode, res);
 });
 app.get('/download', (req,res) => {res.sendFile(path.join(__dirname, 'public', "document.pdf"))})
 app.get('/upload', (req,res) => res.render('upload'));
@@ -52,10 +49,11 @@ app.post('/upload', upload, (req,res) => uploadToDrive(req,res));
 app.get('/logout', (req, res)=>{state.auth.token=null;res.redirect('/')})
 
 function getAcceptance(res){
-	console.log("getting acceptance: ", state.applicationConfig);
-	res.redirect('https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id='
-	+ state.applicationConfig.clientID + '&scope=user.read Files.ReadWrite.All offline_access&redirect_uri='
-	+ state.applicationConfig.redirectUrl + "&response_type=code");
+	res.redirect('https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
+	+ '?client_id='+ state.applicationConfig.clientID
+	+ '&redirect_uri='+ state.applicationConfig.redirectUrl
+	+ '&scope='+ state.applicationConfig.scope
+	+ "&response_type=code");
 }
 
 function buildTokenRequest (code) {
@@ -68,14 +66,40 @@ return	{
 		'Content-Type': 'application/x-www-form-urlencoded'
 	},
 	'form':{
-		'client_id':this.state.applicationConfig.clientID,
-		'client_secret':this.state.applicationConfig.apppwd,
+		'client_id':state.applicationConfig.clientID,
+		'client_secret':state.applicationConfig.apppwd,
 		'code':code,
-		'redirect_uri':this.state.applicationConfig.redirectUrl,
+		'redirect_uri':state.applicationConfig.redirectUrl,
 		'grant_type':'authorization_code',
-		'scope':'user.read Files.ReadWrite Files.ReadWrite.All',
+		'scope':state.applicationConfig.scope,
 	}
 }}
+
+function getToken(clientcode, res){
+	// check to see if token already exists and clientcode
+	// different from the one we're getting
+	if (clientcode != state.auth.clientcode) getAcceptance(res);
+	if (!state.auth.token)
+	{
+		request(buildTokenRequest(clientcode),
+			(err, httpResponse, body) => {
+			if (err) {
+			return console.error('upload failed:', err);
+			}
+			let response = JSON.parse(body);
+			if ((httpResponse == 400)&&(response.error=='invalid_grant'))
+				newtoken=response.access_token;
+				state.auth.token=newtoken;
+				if(newtoken) extendTokenLifetime();
+			res.redirect('/');
+		})
+		.on('error', function(err) {
+			console.log(err)
+		})
+		request.end;
+	}
+	else getAcceptance(res) // needs res to redirect
+}
 
 function getUserOptions(tkn) {
 	uri=state.applicationConfig.graphEndpoint+"/me";
@@ -93,11 +117,20 @@ function getUserInfo(req,res){
 		request(getUserOptions(state.auth.token), (err,httpResponse,body) => {
 		if (err){return console.error('err:', err)}
 		let response = JSON.parse(body);
-		response.token = !(empty(state.auth.token));
+		response.token=true; // passing to view that we have a token
 		res.render('response', {resp: response});
 		});
 	}
-	else getAcceptance(res);}
+	else
+	{
+		if (!(empty(state.auth.clientcode)))
+		{
+			getToken(state.auth.clientcode,res);
+		}
+		else {
+			getAcceptance(res);
+		}
+	}}
 
 function extendTokenLifetime(){
 	requestOptions = {
@@ -118,47 +151,11 @@ function extendTokenLifetime(){
 	})
 }
 
-function getToken(req,res){
-	// check to see if token already exists and clientcode
-	// different from the one we're getting
-	if (((req.query.code)||state.auth.clientcode)
-	    || (!state.auth.token))
-	{
-		self=this;
-		console.log("now having to get token with code: ", self.state.applicationConfig.clientID);
-		request(buildTokenRequest(self.state.auth.clientcode),
-			(err, httpResponse, body) => {
-			if (err) {
-			return console.error('upload failed:', err);
-			}
-			let response = JSON.parse(body);
-			if ((httpResponse == 400)&&(response.error=='invalid_grant'))
-				console.log("what ?! : ", this.state.auth.clientcode);
-				this.state.auth.clientcode = null;
-			newtoken=response.access_token;
-			state.auth.token=newtoken;
-			if(newtoken) extendTokenLifetime();
-			res.redirect('/');
-		})
-		.on('error', function(err) {
-			console.log(err)
-		})
-		request.end;
-	}
-	else getAcceptance(res) // needs res to redirect
-}
-
 function uploadToDrive(req,res){
-	// make sure we still have a token
-	if ((!state.auth.token)||(state.auth.clientcode))
-		res.redirect('/gettoken?code='+state.applicationConfig.clientID);
-	else if (!state.auth.token) res.redirect('/gettoken');
 	tkn=state.auth.token;
-	// load the uploaded image as binary data
-	// build our request to OneDrive
 	buildReq = {
 		'port':443,
-		'uri':this.state.applicationConfig.graphEndpoint
+		'uri':state.applicationConfig.graphEndpoint
 			+ '/me/drive/root:/'+ req.file.originalname +':/content',
 		'headers':{
 		'Authorization':'Bearer '+tkn,
