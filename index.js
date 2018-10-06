@@ -19,7 +19,7 @@ state={
 			clientID: process.env.APPID,
 			apppwd: process.env.APPPWD,
 			graphEndpoint: "https://graph.microsoft.com/beta",
-			redirectUrl:"http://localhost:5000/token",
+			redirectUrl:process.env.INSTANCE,
 			scope:"user.read Files.ReadWrite.All offline_access"
 	},
 	auth: {
